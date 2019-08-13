@@ -12,6 +12,8 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+from utils import save_checkpoint, load_checkpoint
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Training")
     #parser.add_argument('--data_dir', action='store')
@@ -30,7 +32,7 @@ def train(model, criterion, optimizer, dataloaders, epochs, gpu):
         running_loss = 0
         for ii, (inputs, labels) in enumerate(dataloaders[0]): # 0 = train
             steps += 1
-            if gpu == 'gpu':
+            if gpu == 'gpu' and torch.cuda.is_available():
                 model.cuda()
                 inputs, labels = inputs.to('cuda'), labels.to('cuda') # use cuda
             else:
@@ -119,9 +121,9 @@ def main():
     if args.arch == "vgg13":
         feature_num = model.classifier[0].in_features
         classifier = nn.Sequential((nn.Dropout(0.5)),
-              (nn.Linear(feature_num, 120)),
+              (nn.Linear(feature_num, int(args.hidden_units))),
               (nn.ReLU()),
-              (nn.Linear(120, 90)),
+              (nn.Linear(int(args.hidden_units), 90)),
               (nn.ReLU()),
               (nn.Linear(90,80)),
               (nn.ReLU()),
@@ -129,16 +131,17 @@ def main():
               (nn.LogSoftmax(dim=1)))
     elif args.arch == "densenet121":
         classifier = nn.Sequential(OrderedDict([
-                                  ('fc1', nn.Linear(1024, 500)),
-                                  ('drop', nn.Dropout(p=0.6)),
-                                  ('relu', nn.ReLU()),
-                                  ('fc2', nn.Linear(500, 102)),
-                                  ('output', nn.LogSoftmax(dim=1))]))
+              ('fc1', nn.Linear(1024, 500)),
+              ('drop', nn.Dropout(p=0.6)),
+              ('relu', nn.ReLU()),
+              ('fc2', nn.Linear(500, 102)),
+              ('output', nn.LogSoftmax(dim=1))]))
 
     model.classifier = classifier
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.classifier.parameters(), lr=float(args.learning_rate))
     train(model, criterion, optimizer, dataloaders, int(args.epochs), args.gpu)
+    save_checkpoint(args.save_dir, model, optimizer, args, classifier)
 
 
 if __name__ == "__main__":
