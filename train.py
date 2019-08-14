@@ -20,9 +20,9 @@ def parse_args():
     parser.add_argument('--arch', dest='arch', default='vgg13', choices=['vgg13', 'densenet121'])
     parser.add_argument('--learning_rate', dest='learning_rate', default='0.001')
     parser.add_argument('--hidden_units', dest='hidden_units', default='120')
-    parser.add_argument('--epochs', dest='epochs', default='3')
+    parser.add_argument('--epochs', dest='epochs', default='1')
     parser.add_argument('--gpu', action='store', default='gpu')
-    #parser.add_argument('--save_dir', dest="save_dir", action="store", default="checkpoint.pth")
+    parser.add_argument('--save_dir', dest="save_dir", action="store", default="checkpoint.pth")
     return parser.parse_args()
 
 def train(model, criterion, optimizer, dataloaders, epochs, gpu):
@@ -141,6 +141,7 @@ def main():
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.classifier.parameters(), lr=float(args.learning_rate))
     train(model, criterion, optimizer, dataloaders, int(args.epochs), args.gpu)
+    model.class_to_idx = image_datasets[0].class_to_idx
     save_checkpoint(args.save_dir, model, optimizer, args, classifier)
 
 

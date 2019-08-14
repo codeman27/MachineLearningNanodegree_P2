@@ -17,7 +17,7 @@ from utils import load_checkpoint, load_cat_names
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('checkpoint', action='store', default='checkpoint.pth')
+    parser.add_argument('--checkpoint', action='store', default='checkpoint.pth')
     parser.add_argument('--top_k', dest='top_k', default='3')
     parser.add_argument('--filepath', dest='filepath', default='flowers/test/1/image_06743.jpg')
     parser.add_argument('--category_names', dest='category_names', default='cat_to_name.json')
@@ -25,10 +25,23 @@ def parse_args():
     return parser.parse_args()
 
 def process_image(image):
-    img_pil = Image.open(image) # use Image
+    img_pil = Image.open(image)
+
+    width, height = img_pil.size
+    size = 256
+
+    if width > height:
+        ratio = width / height
+        new_height = size
+        new_width = int(size * ratio)
+
+    else:
+        ratio = height / width
+        new_width = size
+        new_height = int(size * ratio)
 
     adjustments = transforms.Compose([
-        transforms.Resize(256),
+        transforms.Resize((new_width, new_height)),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -57,10 +70,10 @@ def predict(image_path, model, topk=3, gpu='gpu'):
 
     probability = F.softmax(output.data,dim=1) # use F
 
-    probs = np.array(probability.topk(topk)[0][0])
+    probs = np.array((probability.topk(topk)[0][0]).cpu())
 
     index_to_class = {val: key for key, val in model.class_to_idx.items()} # from reviewer advice
-    top_classes = [np.int(index_to_class[each]) for each in np.array(probability.topk(topk)[1][0])]
+    top_classes = [np.int(index_to_class[each]) for each in np.array((probability.topk(topk)[1][0]).cpu())]
 
     return probs, top_classes
 
